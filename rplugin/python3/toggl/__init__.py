@@ -11,9 +11,10 @@ class Toggl(object):
         self.nvim = nvim
         self.api_token = nvim.eval("g:toggl_api_token")
         self.api = TogglAPI(self.api_token)
-        self.wid = self.api.workspaces()[0]["id"]
 
+    @neovim.autocmd("VimEnter")
     def update(self):
+        self.wid = self.api.workspaces()[0]["id"]
         self.projects = self.get_projects([])
 
     def echo(self, msg):
@@ -40,13 +41,25 @@ class Toggl(object):
         projects = [arg[1:] for arg in args if arg[0] == "+"]
         if len(projects) > 1:
             raise RuntimeError("Multiple projects are specified.")
+        if len(projects) == 1:
+            name = projects[0]
+        else:
+            name = ""
+        for p in self.projects:
+            if p["name"] == name:
+                pid = p["id"]
+                break
+        else:
+            pid = 0
+
         tags = [arg[1:] for arg in args if arg[0] == "@"]
         desc = " ".join([arg for arg in args
                          if not arg.startswith(("+", "@"))])
+
         self.api.time_entries.start({
             "time_entry": {
                 "description": desc,
-                "pid": 0,
+                "pid": pid,
                 "tags": tags,
                 "created_with": "toggl.nvim",
             }
