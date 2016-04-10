@@ -20,6 +20,11 @@ class API_base(object):
         )
         return r.json()
 
+    def _put(self, rest):
+        url = op.join(self.base_url, rest)
+        r = requests.put(url, auth=(self.api_token, "api_token"))
+        return r.json()
+
     def _post(self, rest, data):
         url = op.join(self.base_url, rest)
         r = requests.post(
@@ -30,7 +35,7 @@ class API_base(object):
 
 
 class Workspaces(API_base):
-    def get(self):
+    def __call__(self):
         return self._get("workspaces")
 
     def projects(self, wid):
@@ -41,8 +46,20 @@ class Workspaces(API_base):
 
 
 class TimeEntries(API_base):
+    def __call__(self, data):
+        return self._post("time_entries", data=data)["data"]
+
+    def start(self, data):
+        return self._post("time_entries/start", data=data)["data"]
+
+    def stop(self, entry_id):
+        return self._put("time_entries/{}/stop".format(entry_id))["data"]
+
     def current(self):
-        return self._get("time_entries/current")
+        r = self._get("time_entries/current")
+        if "data" in r:
+            return r["data"]
+        return None
 
 
 class TogglAPI(object):
