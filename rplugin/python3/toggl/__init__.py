@@ -11,9 +11,8 @@ class Toggl(object):
         self.nvim = nvim
         self.api_token = nvim.eval("g:toggl_api_token")
         self.api = TogglAPI(self.api_token)
-        self.update()
 
-    @neovim.function("TogglUpdate", sync=True)
+    @neovim.autocmd("VimEnter")
     def update(self):
         self.wid = self.api.workspaces()[0]["id"]
         self.projects = self.get_projects([])
