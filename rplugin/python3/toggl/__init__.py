@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 import neovim
 from .api import TogglAPI
 from requests.exceptions import ConnectionError
@@ -12,14 +13,31 @@ class Toggl(object):
         self.nvim = nvim
         self.api_token = nvim.eval("g:toggl_api_token")
         self.api = TogglAPI(self.api_token)
+        self.http_rest_time = 60
+        self.last_obtained = 0
+        self.online = False
 
     @neovim.autocmd("VimEnter")
-    def update(self):
+    def init_async(self):
         try:
             self.wid = self.api.workspaces()[0]["id"]
             self.projects = self.get_projects([])
         except ConnectionError:
             self.echo("No network, toggl.nvim is disabled.")
+            self.online = False
+        else:
+            self.online = True
+
+    @neovim.autocmd("CursorHold")
+    def get_current(self):
+        if not self.online:
+            return
+        now = time.time()
+        if now - self.last_obtained < self.http_rest_time:
+            return
+        task = self.api.time_entries.current()
+        self.nvim.vars["toggl_current"] = task
+        self.last_obtained = now
 
     def echo(self, msg):
         self.nvim.command("echo '{}'".format(msg))
@@ -27,10 +45,6 @@ class Toggl(object):
     @neovim.function("TogglAPIToken", sync=True)
     def api_token(self, args):
         return self.api_token
-
-    @neovim.function("TogglGetCurrent", sync=True)
-    def get_current(self, args):
-        return self.api.time_entries.current()
 
     @neovim.function("TogglGetProjects", sync=True)
     def get_projects(self, args):
