@@ -2,6 +2,7 @@
 
 import neovim
 from .api import TogglAPI
+from requests.exceptions import ConnectionError
 
 
 @neovim.plugin
@@ -14,8 +15,11 @@ class Toggl(object):
 
     @neovim.autocmd("VimEnter")
     def update(self):
-        self.wid = self.api.workspaces()[0]["id"]
-        self.projects = self.get_projects([])
+        try:
+            self.wid = self.api.workspaces()[0]["id"]
+            self.projects = self.get_projects([])
+        except ConnectionError:
+            self.echo("No network, toggl.nvim is disabled.")
 
     def echo(self, msg):
         self.nvim.command("echo '{}'".format(msg))
