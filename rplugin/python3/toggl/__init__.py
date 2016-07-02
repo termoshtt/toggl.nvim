@@ -17,28 +17,14 @@ class Toggl(object):
     def update(self):
         try:
             self.wid = self.api.workspaces()[0]["id"]
-            self.projects = self.get_projects([])
+            self.projects = self.api.workspaces.projects(self.wid)
+            self.tags = self.api.workspaces.tags(self.wid)
         except ConnectionError:
-            self.echo("No network, toggl.nvim is disabled.")
+            self.echo("No network, disabled.")
 
     def echo(self, msg):
-        self.nvim.command("echo '{}'".format(msg))
+        self.nvim.command("echo '[Toggl.nvim] {}'".format(msg))
 
-    @neovim.function("TogglAPIToken", sync=True)
-    def api_token(self, args):
-        return self.api_token
-
-    @neovim.function("TogglGetCurrent", sync=True)
-    def get_current(self, args):
-        return self.api.time_entries.current()
-
-    @neovim.function("TogglGetProjects", sync=True)
-    def get_projects(self, args):
-        return self.api.workspaces.projects(self.wid)
-
-    @neovim.function("TogglGetTags", sync=True)
-    def get_tags(self, args):
-        return self.api.workspaces.tags(self.wid)
 
     @neovim.command("TogglStart", range='', nargs="*")
     def start(self, args, range):
