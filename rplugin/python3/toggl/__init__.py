@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import neovim
+import time
 from .api import TogglAPI
 from requests.exceptions import ConnectionError
 
@@ -25,6 +26,17 @@ class Toggl(object):
     def echo(self, msg):
         self.nvim.command("echo '[Toggl.nvim] {}'".format(msg))
 
+    @neovim.command("TogglEnable")
+    def enable_toggl(self):
+        self.echo("start watching")
+        while True:
+            try:
+                cur = self.api.time_entries.current()["description"]
+                self.nvim.vars["toggl_current"] = cur
+            except ConnectionError:
+                self.echo("Cannot access to Toggl API, disable toggl.nvim")
+                break
+            time.sleep(60)
 
     @neovim.command("TogglStart", range='', nargs="*")
     def start(self, args, range):
