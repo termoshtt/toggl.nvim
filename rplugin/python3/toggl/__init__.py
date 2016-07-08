@@ -21,9 +21,10 @@ class Toggl(object):
     @neovim.command("TogglUpdate")
     def update(self):
         try:
-            self.wid = self.api.workspaces()[0]["id"]
-            self.projects = self.api.workspaces.projects(self.wid)
-            self.tags = self.api.workspaces.tags(self.wid)
+            ws = self.api.workspaces
+            self.wid = ws()[0]["id"]
+            self.nvim.vars["toggl_projects"] = ws.projects(self.wid)
+            self.nvim.vars["toggl_tags"] = ws.tags(self.wid)
         except ConnectionError:
             self.echo("No network, disabled.")
         else:
@@ -56,7 +57,7 @@ class Toggl(object):
             name = projects[0]
         else:
             name = ""
-        for p in self.projects:
+        for p in self.nvim.vars["toggl_projects"]:
             if p["name"] == name:
                 pid = p["id"]
                 break
