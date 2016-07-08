@@ -35,10 +35,10 @@ class Toggl(object):
         while True:
             try:
                 cur = self.api.time_entries.current()
-                if hasattr(cur, "description"):
+                if "description" in cur:
                     self.nvim.vars["toggl_current"] = cur["description"]
                 else:
-                    self.nvim.vars["toggl_current"] = ""
+                    self.nvim.vars["toggl_current"] = "No task..."
             except ConnectionError:
                 self.echo("Cannot access to Toggl API, disable toggl.nvim")
                 break
