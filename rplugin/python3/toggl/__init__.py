@@ -34,9 +34,17 @@ class Toggl(object):
         try:
             ws = self.api.workspaces
             self.wid = ws()[0]["id"]
-            self.nvim.vars["toggl_projects"] = ws.projects(self.wid)
+            projects = ws.projects(self.wid)
+            self.pmap = {p["id"]: p["name"] for p in projects}
+            self.nvim.vars["toggl_projects"] = projects
             self.nvim.vars["toggl_tags"] = ws.tags(self.wid)
-            self.nvim.vars["toggl_entries"] = self.entries()
+            self.nvim.vars["toggl_unite_task"] = [{
+                "word": "{}\t[{}]\t({})".format(
+                    t["description"], self.pmap[t["pid"]], t["duration"]),
+                "source": "toggl/task",
+                "kind": "toggl/task",
+                "source__task": t
+            } for t in self.entries()]
         except ConnectionError:
             self.echo("No network, disabled.")
         else:
