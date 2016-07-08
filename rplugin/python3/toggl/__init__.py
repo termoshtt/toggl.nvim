@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import neovim
+import time
 from .api import TogglAPI
 from requests.exceptions import ConnectionError
 
@@ -12,36 +13,42 @@ class Toggl(object):
         self.nvim = nvim
         self.api_token = nvim.eval("g:toggl_api_token")
         self.api = TogglAPI(self.api_token)
+        self.network_status = False
 
-    @neovim.autocmd("VimEnter")
+    def echo(self, msg):
+        self.nvim.command("echo '[Toggl.nvim] {}'".format(msg))
+
+    @neovim.command("TogglUpdate")
     def update(self):
         try:
             self.wid = self.api.workspaces()[0]["id"]
-            self.projects = self.get_projects([])
+            self.projects = self.api.workspaces.projects(self.wid)
+            self.tags = self.api.workspaces.tags(self.wid)
         except ConnectionError:
-            self.echo("No network, toggl.nvim is disabled.")
+            self.echo("No network, disabled.")
+        else:
+            self.network_status = True
 
-    def echo(self, msg):
-        self.nvim.command("echo '{}'".format(msg))
-
-    @neovim.function("TogglAPIToken", sync=True)
-    def api_token(self, args):
-        return self.api_token
-
-    @neovim.function("TogglGetCurrent", sync=True)
-    def get_current(self, args):
-        return self.api.time_entries.current()
-
-    @neovim.function("TogglGetProjects", sync=True)
-    def get_projects(self, args):
-        return self.api.workspaces.projects(self.wid)
-
-    @neovim.function("TogglGetTags", sync=True)
-    def get_tags(self, args):
-        return self.api.workspaces.tags(self.wid)
+    @neovim.command("TogglEnable")
+    def enable_toggl(self):
+        self.update()
+        while True:
+            try:
+                cur = self.api.time_entries.current()
+                if hasattr(cur, "description"):
+                    self.nvim.vars["toggl_current"] = cur["description"]
+                else:
+                    self.nvim.vars["toggl_current"] = ""
+            except ConnectionError:
+                self.echo("Cannot access to Toggl API, disable toggl.nvim")
+                break
+            time.sleep(60)
 
     @neovim.command("TogglStart", range='', nargs="*")
     def start(self, args, range):
+        if not self.network_status:
+            self.echo("toggl.nvim is not enabled.")
+            return
         projects = [arg[1:] for arg in args if arg[0] == "+"]
         if len(projects) > 1:
             raise RuntimeError("Multiple projects are specified.")
@@ -72,6 +79,9 @@ class Toggl(object):
 
     @neovim.command("TogglStop")
     def stop(self):
+        if not self.network_status:
+            self.echo("toggl.nvim is not enabled.")
+            return
         current = self.api.time_entries.current()
         if current is None:
             self.echo("No task is running.")
