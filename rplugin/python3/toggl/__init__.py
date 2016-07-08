@@ -31,8 +31,11 @@ class Toggl(object):
         self.echo("start watching")
         while True:
             try:
-                cur = self.api.time_entries.current()["description"]
-                self.nvim.vars["toggl_current"] = cur
+                cur = self.api.time_entries.current()
+                if hasattr(cur, "description"):
+                    self.nvim.vars["toggl_current"] = cur["description"]
+                else:
+                    self.nvim.vars["toggl_current"] = ""
             except ConnectionError:
                 self.echo("Cannot access to Toggl API, disable toggl.nvim")
                 break
