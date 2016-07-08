@@ -39,8 +39,10 @@ class Toggl(object):
             self.nvim.vars["toggl_projects"] = projects
             self.nvim.vars["toggl_tags"] = ws.tags(self.wid)
             self.nvim.vars["toggl_unite_task"] = [{
-                "word": "{}\t[{}]\t({})".format(
-                    t["description"], self.pmap[t["pid"]], t["duration"]),
+                "word": "{}\t[{}]\t({}m)".format(
+                    t["description"],
+                    self.pmap[t["pid"]],
+                    t["duration"] // 60),
                 "source": "toggl/task",
                 "kind": "toggl/task",
                 "source__task": t
@@ -57,9 +59,11 @@ class Toggl(object):
             try:
                 cur = self.api.time_entries.current()
                 if cur and "description" in cur:
-                    self.nvim.vars["toggl_current"] = cur["description"]
+                    st = "{} [{}]".format(cur["description"],
+                                          self.pmap[cur["pid"]])
                 else:
-                    self.nvim.vars["toggl_current"] = "Don't forget time tracking!"
+                    st = "Don't forget time tracking!"
+                self.nvim.vars["toggl_current"] = st
             except ConnectionError:
                 self.echo("Cannot access to Toggl API, disable toggl.nvim")
                 break
