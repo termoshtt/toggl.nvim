@@ -18,6 +18,17 @@ class Toggl(object):
     def echo(self, msg):
         self.nvim.command("echo '[Toggl.nvim] {}'".format(msg))
 
+    def entries(self):
+        def convert(s):
+            st = time.strftime("%FT%T%z", time.gmtime(s))
+            return st[:-2] + ":" + st[-2:]
+
+        now = time.time()
+        return self.api.time_entries(
+            convert(now-60*60*24*7),
+            convert(now)
+        )
+
     @neovim.command("TogglUpdate")
     def update(self):
         try:
@@ -25,6 +36,7 @@ class Toggl(object):
             self.wid = ws()[0]["id"]
             self.nvim.vars["toggl_projects"] = ws.projects(self.wid)
             self.nvim.vars["toggl_tags"] = ws.tags(self.wid)
+            self.nvim.vars["toggl_entries"] = self.entries()
         except ConnectionError:
             self.echo("No network, disabled.")
         else:
