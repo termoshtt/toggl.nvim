@@ -18,32 +18,56 @@ class Toggl(object):
     def echo(self, msg):
         self.nvim.command("echo '[Toggl.nvim] {}'".format(msg))
 
+    def entries(self):
+        def convert(s):
+            st = time.strftime("%FT%T%z", time.gmtime(s))
+            return st[:-2] + ":" + st[-2:]
+
+        now = time.time()
+        return self.api.time_entries(
+            convert(now-60*60*24*7),
+            convert(now)
+        )
+
     @neovim.command("TogglUpdate")
     def update(self):
         try:
             ws = self.api.workspaces
             self.wid = ws()[0]["id"]
-            self.nvim.vars["toggl_projects"] = ws.projects(self.wid)
+            projects = ws.projects(self.wid)
+            self.pmap = {p["id"]: p["name"] for p in projects}
+            self.nvim.vars["toggl_projects"] = projects
             self.nvim.vars["toggl_tags"] = ws.tags(self.wid)
+            self.nvim.vars["toggl_unite_task"] = [{
+                "word": "{}\t[{}]\t({}m)".format(
+                    t["description"],
+                    self.pmap[t["pid"]],
+                    t["duration"] // 60),
+                "source": "toggl/task",
+                "kind": "toggl/task",
+                "source__task": t
+            } for t in self.entries()]
         except ConnectionError:
             self.echo("No network, disabled.")
         else:
             self.network_status = True
 
     @neovim.command("TogglEnable")
-    def enable_toggl(self):
+    def enable(self):
         self.update()
         while True:
             try:
                 cur = self.api.time_entries.current()
-                if "description" in cur:
-                    self.nvim.vars["toggl_current"] = cur["description"]
+                if cur and "description" in cur:
+                    st = "{} [{}]".format(cur["description"],
+                                          self.pmap[cur["pid"]])
                 else:
-                    self.nvim.vars["toggl_current"] = "No task..."
+                    st = "Don't forget time tracking!"
+                self.nvim.vars["toggl_current"] = st
             except ConnectionError:
                 self.echo("Cannot access to Toggl API, disable toggl.nvim")
                 break
-            time.sleep(60)
+            time.sleep(15)
 
     @neovim.command("TogglStart", range='', nargs="*")
     def start(self, args, range):

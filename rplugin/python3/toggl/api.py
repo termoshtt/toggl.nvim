@@ -46,8 +46,8 @@ class Workspaces(API_base):
 
 
 class TimeEntries(API_base):
-    def __call__(self, data):
-        return self._post("time_entries", data=data)["data"]
+    def __call__(self, start, end):
+        return self._get("time_entries", start_date=start, end_date=end)
 
     def start(self, data):
         return self._post("time_entries/start", data=data)["data"]
